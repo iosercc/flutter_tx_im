@@ -82,19 +82,11 @@ class _TencentChatAppState extends State<TencentChatApp>
             status: AppStatus.background, totalCount: unreadCount);
         break;
       case AppLifecycleState.detached:
-        _coreInstance.setOfflinePushStatus(
-            status: AppStatus.background, totalCount: unreadCount);
-        if (unreadCount != null) {
-          ChannelPush.setBadgeNum(unreadCount);
-        }
+        // ignore: todo
+        // TODO: Handle this case.
         break;
       case AppLifecycleState.hidden:
-        _coreInstance.setOfflinePushStatus(
-            status: AppStatus.background, totalCount: unreadCount);
-        if (unreadCount != null) {
-          ChannelPush.setBadgeNum(unreadCount);
-        }
-        break;
+        // TODO: Handle this case.
     }
   }
 
@@ -211,6 +203,8 @@ class _TencentChatAppState extends State<TencentChatApp>
             if (callbackValue.errorCode == 10004 &&
                 callbackValue.errorMsg!.contains("not support @all")) {
               ToastUtils.toast(TIM_t("当前群组不支持@全体成员"));
+            }else if (callbackValue.errorCode == 10017){
+              ToastUtils.toast('你已被禁言');
             } else if (callbackValue.errorCode == -4) {
               return;
             } else if (callbackValue.errorCode == -1) {

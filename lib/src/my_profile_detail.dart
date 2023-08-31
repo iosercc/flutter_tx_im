@@ -208,11 +208,16 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                 ),
                 onTap: () => showChangeAvatarDialog(context),
               ),
+            TIMUIKitOperationItem(
+              isEmpty: !TencentUtils.isTextNotEmpty(userProfile?.nickName),
+              operationName: TIM_t("二维码"),
+              operationRightWidget: Text(TIM_t("查看"),
+                  textAlign: isWideScreen ? null : TextAlign.end),
+            ),
             TIMUIKitProfileWidget.operationDivider(
                 color: theme.weakDividerColor,
                 height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 20)
-            ),
+                margin: const EdgeInsets.symmetric(vertical: 20)),
             InkWell(
               onTapDown: (details) async {
                 widget.controller?.showTextInputBottomSheet(
@@ -251,6 +256,40 @@ class MyProfileDetailState extends State<MyProfileDetail> {
               userProfile?.userID ?? "",
               false,
             ),
+            InkWell(
+                onTapDown: (details) async {
+                  widget.controller?.showTextInputBottomSheet(
+                      context: context,
+                      title: TIM_t("拍一拍"),
+                      tips: TIM_t("设置后，朋友拍你的时候将会出现"),
+                      initOffset: Offset(
+                          min(details.globalPosition.dx,
+                              MediaQuery.of(context).size.width - 400),
+                          min(details.globalPosition.dy,
+                              MediaQuery.of(context).size.height - 100)),
+                      onSubmitted: (String selfPat) async {
+                        final res =
+                            await widget.controller?.updateSelfPat(selfPat);
+                        if (res?.code == 0) {
+                          setState(() {
+                            userProfile?.customInfo = {'selfPat': selfPat};
+                          });
+                        }
+                      },
+                      theme: theme);
+                },
+                child: TIMUIKitOperationItem(
+                    isEmpty: !TencentUtils.isTextNotEmpty(
+                        userProfile?.customInfo?['selfPat']),
+                    operationName: TIM_t("拍一拍"),
+                    operationRightWidget: Text(
+                        TencentUtils.isTextNotEmpty(
+                                userProfile?.customInfo?['selfPat'])
+                            ? userProfile!.customInfo!['selfPat']!.toString()
+                            : isWideScreen
+                                ? ""
+                                : TIM_t("未设置"),
+                        textAlign: isWideScreen ? null : TextAlign.end))),
             TIMUIKitProfileWidget.operationDivider(
                 color: theme.weakDividerColor,
                 height: 1,

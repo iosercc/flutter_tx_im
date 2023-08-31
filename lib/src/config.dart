@@ -4,17 +4,8 @@ import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 enum WebUrl { personalInfo, thirdPartyInfo }
 
 class IMDemoConfig {
-  // live plugin
-  static String licenseKey = "";
-  static String licenseUrl = "";
-  static String liveRoomId = '@TGS#aCWHGJ3LC';
-  static String livePlayUrl = '';
-
-  static const int sdkappid =
-      int.fromEnvironment('SDK_APPID', defaultValue: 0);
-  static const String key = String.fromEnvironment('KEY',
-      defaultValue:
-          "");
+  static const int sdkappid = 20002057;
+  static const String key = 'a8c9718ddbca9db64647dee75921354d6a3de098ae7ebd4dbe01ee89a0cb8824';
   static const String appVersion =
       String.fromEnvironment('APP_VERSION', defaultValue: "0.0.1");
   static const String projectType =

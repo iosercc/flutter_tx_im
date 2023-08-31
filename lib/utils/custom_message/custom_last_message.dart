@@ -1,17 +1,28 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/calling_message.dart';
+import 'package:tencent_cloud_chat_demo/utils/custom_message/pat_message.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:provider/provider.dart';
 // import 'package:tencent_cloud_chat_vote_plugin/tencent_cloud_chat_vote_plugin.dart';
 
-String handleCustomMessage(V2TimMessage message) {
+String handleCustomMessage(V2TimMessage message,loginUserInfo) {
   final customElem = message.customElem;
   String customLastMsgShow = TIM_t("[自定义]");
 
   if (customElem?.data == "group_create") {
     customLastMsgShow = TIM_t("群聊创建成功！");
+  }
+
+  if (customElem?.desc == 'CustomPatMessage'){
+    PatMessage patMessage = PatMessage.fromJSON(jsonDecode(customElem?.data??''));
+    String fromNickName = patMessage.fromUserId == loginUserInfo?.userID? "我" : '"${patMessage.fromNickName}"';
+    String toNickName = patMessage.toUserId == loginUserInfo?.userID? "我" : '"${patMessage.toNickName}"';
+    customLastMsgShow = '$fromNickName拍了拍$toNickName${patMessage.patString}';
   }
   // if (TencentCloudChatVotePlugin.isVoteMessage(message)) {
   //   customLastMsgShow =
@@ -45,12 +56,14 @@ String handleCustomMessage(V2TimMessage message) {
 
 Widget renderCustomMessage(V2TimMessage message, BuildContext context) {
   final theme = Provider.of<DefaultThemeData>(context).theme;
+  final loginUserInfoModel = Provider.of<LoginUserInfo>(context);
+  V2TimUserFullInfo loginUserInfo = loginUserInfoModel.loginUserInfo;
   final isWideScreen =
       TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
   return Row(children: [
     Expanded(
         child: Text(
-      handleCustomMessage(message),
+      handleCustomMessage(message,loginUserInfo),
       softWrap: true,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,

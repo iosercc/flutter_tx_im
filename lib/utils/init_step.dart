@@ -1,12 +1,21 @@
 import 'package:flutter/cupertino.dart';
+import 'package:sp_util/sp_util.dart';
+import 'package:tencent_cloud_chat_demo/model/user_model.dart';
+import 'package:tencent_cloud_chat_demo/network/network_config.dart';
+import 'package:tencent_cloud_chat_demo/network/network_utils.dart';
+import 'package:tencent_cloud_chat_demo/src/config.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/home_page.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/home_page.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/login.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/custom_sticker_package.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/utils/GenerateUserSig.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
+import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:tencent_cloud_chat_demo/utils/toast.dart';
+import 'package:tencent_cloud_chat_demo/utils/user_utils.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 
@@ -34,11 +43,12 @@ class InitStep {
               .asMap()
               .keys
               .map((idx) =>
-              CustomSticker(index: idx, name: customEmojiPackage.list[idx]))
+              CustomSticker(index: idx, name: customEmojiPackage.list[idx],url: 'https://photo.tuchong.com/1590219/f/254968217.jpg'))
               .toList(),
           menuItem: CustomSticker(
             index: 0,
             name: customEmojiPackage.icon,
+              url: 'https://photo.tuchong.com/1590219/f/254968217.jpg'
           ));
     }).toList());
 
@@ -86,11 +96,19 @@ class InitStep {
   }
 
   static void checkLogin(BuildContext context, initIMSDKAndAddIMListeners) async {
+    await SpUtil.getInstance();
+    NetWorkUtils.instance.initConfig(NetWorkConfig(successCode: '0',noLoginCode: '401'));
     // 初始化IM SDK
     initIMSDKAndAddIMListeners();
-
-    Future.delayed(const Duration(seconds: 1), () {
-      directToLogin(context);
+    Future.delayed(const Duration(seconds: 2), () {
+      // 判断是否登录
+      if (NetWorkUtils.getToken() == null || NetWorkUtils.getToken() == '') {
+        directToLogin(context, initIMSDKAndAddIMListeners);
+      }else{
+        IMServiceManager.loginIM(UserUtils.getUserModel()!);
+        directToHomePage(context);
+      }
+      // directToLogin(context);
       // 修改自定义表情的执行时机
       setCustomSticker(context);
     });

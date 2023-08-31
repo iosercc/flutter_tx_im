@@ -1,15 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/vote_example/vote_detail_example.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/calling_message.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/group_call_message_builder.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/single_call_message_builder.dart';
+import 'package:tencent_cloud_chat_demo/utils/custom_message/pat_message.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/ui/controller/tim_uikit_chat_controller.dart';
+import 'package:tencent_cloud_chat_uikit/ui/utils/message.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/link_preview/common/extensions.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/link_preview/common/utils.dart';
@@ -65,7 +69,7 @@ class _CustomMessageElemState extends State<CustomMessageElem> {
   bool isShowJumpState = false;
   bool isShining = false;
   bool isShowBorder = false;
-
+  V2TimUserFullInfo? loginUserInfo;
   _showJumpColor() {
     isShining = true;
     int shineAmount = 6;
@@ -101,6 +105,10 @@ class _CustomMessageElemState extends State<CustomMessageElem> {
     final isCustomerServiceMessage =
         TencentCloudChatCustomerServicePlugin.isCustomerServiceMessage(
             widget.message);
+    PatMessage? patMessage;
+    if (customElem?.desc == 'CustomPatMessage'){
+      patMessage = PatMessage.fromJSON(jsonDecode(customElem?.data??''));
+    }
     if (callingMessage != null) {
       if (widget.message.groupID != null) {
         // Group Call message
@@ -173,38 +181,21 @@ class _CustomMessageElemState extends State<CustomMessageElem> {
         theme,
         true,
       );
-    } else if (linkMessage != null) {
-      final String option1 = linkMessage.link ?? "";
-      return renderMessageItem(
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(linkMessage.text ?? ""),
-            MarkdownBody(
-              data: TIM_t_para("[查看详情 >>]({{option1}})", "[查看详情 >>]($option1)")(
-                  option1: option1),
-              styleSheet: MarkdownStyleSheet.fromTheme(ThemeData(
-                      textTheme: const TextTheme(
-                          // ignore: deprecated_member_use
-                          bodyText2: TextStyle(fontSize: 16.0))))
-                  .copyWith(
-                a: TextStyle(color: LinkUtils.hexToColor("015fff")),
-              ),
-              onTapLink: (
-                String link,
-                String? href,
-                String title,
-              ) {
-                LinkUtils.launchURL(context, linkMessage.link ?? "");
-              },
-            )
-          ],
-        ),
-        theme,
-        false,
-      );
-    } else if (webLinkMessage != null) {
+    }
+    // else if (linkMessage != null) {
+    //   return renderMessageItem(
+    //     Column(
+    //       mainAxisAlignment: MainAxisAlignment.start,
+    //       crossAxisAlignment: CrossAxisAlignment.start,
+    //       children: [
+    //         Text(TIM_t(("群聊创建成功！"))),
+    //       ],
+    //     ),
+    //     theme,
+    //     false,
+    //   );
+    // }
+    else if (webLinkMessage != null) {
       return renderMessageItem(
         Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -243,6 +234,24 @@ class _CustomMessageElemState extends State<CustomMessageElem> {
         theme,
         false,
       );
+    } else if (patMessage != null) {
+      String fromNickName = patMessage.fromUserId == loginUserInfo?.userID? "我" : '"${patMessage.fromNickName}"';
+      String toNickName = patMessage.toUserId == loginUserInfo?.userID? "我" : '"${patMessage.toNickName}"';
+      bool toMe = false;
+      if (patMessage.toUserId == loginUserInfo?.userID){
+        toMe = true;
+      }
+      return MessageUtils.wrapMessageTips(
+          Text(
+            '$fromNickName拍了拍$toNickName${patMessage.patString}',
+            softWrap: true,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: toMe?FontWeight.bold:FontWeight.w400,
+                color: toMe?hexToColor("333333"):hexToColor("888888")),
+          ),
+          theme);
     } else {
       return renderMessageItem(const Text("[自定义]"), theme, false);
     }
@@ -289,7 +298,8 @@ class _CustomMessageElemState extends State<CustomMessageElem> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
-
+    final loginUserInfoModel = Provider.of<LoginUserInfo>(context);
+    loginUserInfo = loginUserInfoModel.loginUserInfo;
     if (widget.isShowJump) {
       if (!isShining) {
         Future.delayed(Duration.zero, () {

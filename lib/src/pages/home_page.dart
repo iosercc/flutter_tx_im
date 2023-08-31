@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_calls_uikit/tuicall_kit.dart';
-import 'package:tencent_cloud_chat_demo/src/pages/live_room/live.dart';
 import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
+import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
 import 'package:tencent_super_tooltip/tencent_super_tooltip.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -181,8 +181,7 @@ class HomePageState extends State<HomePage> {
           ? TIM_t("消息")
           : connectText,
       1: TIM_t("通讯录"),
-      2: TIM_t("直播"),
-      3: TIM_t("我的"),
+      2: TIM_t("我的"),
     };
   }
 
@@ -281,22 +280,6 @@ class HomePageState extends State<HomePage> {
               ),
             )
           ],
-        ),
-      ),
-      NavigationBarData(
-        widget: const Live(),
-        title: TIM_t("直播"),
-        selectedIcon: ColorFiltered(
-            child: const Icon(
-              Icons.live_tv_rounded,
-              size: 24,
-            ),
-            colorFilter: ColorFilter.mode(
-                theme.primaryColor ?? CommonColor.primaryColor,
-                BlendMode.srcATop)),
-        unselectedIcon: const Icon(
-          Icons.live_tv_rounded,
-          size: 24,
         ),
       ),
       NavigationBarData(
@@ -495,7 +478,7 @@ class HomePageState extends State<HomePage> {
               ),
               currentIndex: currentIndex,
               type: BottomNavigationBarType.fixed,
-              onTap: (index) {
+              onTap: (index) async {
                 _changePage(index, context);
                 if (isNeedMoveToConversation) {
                   if (index == 0 && currentIndex == 0) {
@@ -507,6 +490,13 @@ class HomePageState extends State<HomePage> {
                 Future.delayed(const Duration(milliseconds: 300), () {
                   isNeedMoveToConversation = false;
                 });
+                if (index == 2) {
+                  V2TimUserFullInfo? info = await IMServiceManager.getLoginUserInfo();
+                  if (info != null) {
+                    Provider.of<LoginUserInfo>(context, listen: false)
+                        .setLoginUserInfo(info);
+                  }
+                }
               },
               selectedItemColor: theme.primaryColor,
               unselectedItemColor: Colors.grey,

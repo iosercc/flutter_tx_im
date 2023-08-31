@@ -1,16 +1,23 @@
 // ignore_for_file: unused_field, unused_element, avoid_print, deprecated_member_use
 
+import 'dart:convert';
 import 'dart:math';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/main.dart';
 import 'package:tencent_cloud_chat_demo/src/config.dart';
 import 'package:tencent_cloud_chat_demo/src/group_application_list.dart';
 import 'package:tencent_cloud_chat_demo/src/group_profile.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/customer_service_example/card_create_example.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/src/vote_example/vote_create_example.dart';
 import 'package:tencent_cloud_chat_customer_service_plugin/tencent_cloud_chat_customer_service_plugin.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/marquee_view.dart';
+import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/chat_life_cycle.dart';
+import 'package:tencent_cloud_chat_uikit/business_logic/separate_models/tui_group_profile_model.dart';
+import 'package:tencent_cloud_chat_uikit/business_logic/separate_models/tui_profile_view_model.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -22,6 +29,7 @@ import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitChat/TIMUIKitTextField
 import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitProfile/profile_widget.dart';
 import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitProfile/widget/tim_uikit_profile_widget.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/wide_popup.dart';
+
 // import 'package:tim_ui_kit_lbs_plugin/pages/location_picker.dart';
 // import 'package:tim_ui_kit_lbs_plugin/utils/location_utils.dart';
 // import 'package:tim_ui_kit_lbs_plugin/utils/tim_location_model.dart';
@@ -63,6 +71,9 @@ class _ChatState extends State<Chat> {
   String? conversationName;
   String? customerServiceTyping;
   bool canSendEvaluate = false;
+  V2TimGroupInfo? groupInfo;
+  String? groupNotice;
+  V2TimUserFullInfo? loginUserInfo;
 
   String _getTitle() {
     return backRemark ?? widget.selectedConversation.showName ?? "Chat";
@@ -148,6 +159,18 @@ class _ChatState extends State<Chat> {
       TencentCloudChatCustomerServicePlugin.sendCustomerServiceStartMessage(
           _chatController.sendMessage);
     }
+    if (widget.selectedConversation.type == 2) {
+      onGetGroupInfo();
+    }
+  }
+
+  onGetGroupInfo() async {
+    groupInfo = await IMServiceManager()
+        .onGetGroupInfo(widget.selectedConversation.groupID ?? '');
+    if (groupInfo != null && groupNotice != groupInfo?.notification) {
+      groupNotice = groupInfo?.notification;
+      if (mounted) setState(() {});
+    }
   }
 
   @override
@@ -166,6 +189,7 @@ class _ChatState extends State<Chat> {
       TencentCloudChatCustomerServicePlugin.sendCustomerServiceStartMessage(
           _chatController.sendMessage);
     }
+    onGetGroupInfo();
   }
 
   _itemClick(String id, BuildContext context, V2TimConversation conversation,
@@ -433,6 +457,8 @@ class _ChatState extends State<Chat> {
     final isWideScreen =
         TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
     final theme = Provider.of<DefaultThemeData>(context).theme;
+    final loginUserInfoModel = Provider.of<LoginUserInfo>(context);
+    loginUserInfo = loginUserInfoModel.loginUserInfo;
     final groupID = widget.selectedConversation.groupID;
     final groupType = widget.selectedConversation.groupType;
     List<String> notAllowGroupType = [
@@ -455,6 +481,33 @@ class _ChatState extends State<Chat> {
         conversationShowName:
             customerServiceTyping ?? conversationName ?? _getTitle(),
         controller: _chatController,
+        topFixWidget: widget.selectedConversation.type == 2 &&
+                groupInfo?.notification?.isNotEmpty == true
+            ? Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                color: hexToColor("EEEEEE"),
+                child: Row(
+                  children: [
+                    Container(
+                        margin: const EdgeInsets.only(left: 10, right: 10),
+                        child: const Icon(Icons.notifications_active_outlined)),
+                    Expanded(
+                      child: MarqueeView(
+                        child: Text(
+                          groupInfo?.notification ?? "",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: hexToColor("333333"),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              )
+            : const SizedBox(),
         lifeCycle:
             ChatLifeCycle(newMessageWillMount: (V2TimMessage message) async {
           // ChannelPush.displayDefaultNotificationForMessage(message);
@@ -526,11 +579,13 @@ class _ChatState extends State<Chat> {
         config: TIMUIKitChatConfig(
             stickerPanelConfig: StickerPanelConfig(
               useQQStickerPackage: true,
-              useTencentCloudChatStickerPackage: true,
+              unicodeEmojiList: [],
+              useTencentCloudChatStickerPackage: false,
               customStickerPackages:
                   Provider.of<CustomStickerPackageData>(context)
                       .customStickerPackageList,
             ),
+            isGroupAdminRecallEnabled: true,
             showC2cMessageEditStatus: true,
             isUseDefaultEmoji: true,
             isAllowClickAvatar: true,
@@ -605,6 +660,10 @@ class _ChatState extends State<Chat> {
             ConvType.values[widget.selectedConversation.type ?? 1],
         onTapAvatar: (userID, tapDetails) =>
             _onTapAvatar(userID, tapDetails, theme, isCustomerServiceChat),
+        onSecondaryTapAvatar: (String userID, TapDownDetails tapDetails) {},
+        onDoubleTapAvatar: (V2TimMessage message) {
+          _sendCustomPatMessage(message, context);
+        },
         initFindingMsg: widget.initFindingMsg,
         messageItemBuilder: MessageItemBuilder(
           messageRowBuilder: (message, messageWidget, onScrollToIndex,
@@ -727,76 +786,79 @@ class _ChatState extends State<Chat> {
           showVideoCall: !isCustomerServiceChat,
           showVoiceCall: !isCustomerServiceChat,
           extraAction: [
+
             // 隐私协议中没有位置消息，暂时下掉
-            // if (!isCustomerServiceChat)
-            //   MorePanelItem(
-            //       id: "location",
-            //       title: TIM_t("位置"),
-            //       onTap: (c) {
-            //         _onTapLocation();
-            //       },
-            //       icon: Container(
-            //         height: 64,
-            //         width: 64,
-            //         margin: const EdgeInsets.only(bottom: 4),
-            //         decoration: const BoxDecoration(
-            //             color: Colors.white,
-            //             borderRadius: BorderRadius.all(Radius.circular(5))),
-            //         child: Icon(
-            //           Icons.location_on,
-            //           color: hexToColor("5c6168"),
-            //           size: 32,
-            //         ),
-            //       )),
-            ...getVotePlugin(canAddVotePlugin, groupID ?? ""),
+            if (!isCustomerServiceChat)
+              MorePanelItem(
+                  id: "collection",
+                  title: TIM_t("收藏"),
+                  onTap: (c) {
+                    // _onTapLocation();
+                  },
+                  icon: Container(
+                    height: 64,
+                    width: 64,
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.all(Radius.circular(5))),
+                    child: Icon(
+                      Icons.star,
+                      color: hexToColor("5c6168"),
+                      size: 32,
+                    ),
+                  )),
+            // ...getVotePlugin(canAddVotePlugin, groupID ?? ""),
             ...getCustomerServicePlugin(),
           ],
         ),
-          appBarConfig: AppBar(
-            actions: [
-              IconButton(
-                  padding: const EdgeInsets.only(left: 8, right: 16),
-                  onPressed: () async {
-                    final conversationType = widget.selectedConversation.type;
+        appBarConfig: AppBar(
+          actions: [
+            IconButton(
+                padding: const EdgeInsets.only(left: 8, right: 16),
+                onPressed: () async {
+                  final conversationType = widget.selectedConversation.type;
 
-                    if (conversationType == 1) {
-                      final userID = widget.selectedConversation.userID;
-                      // if had remark modified its will back new remark
-                      String? newRemark = await Navigator.push(
+                  if (conversationType == 1) {
+                    final userID = widget.selectedConversation.userID;
+                    // if had remark modified its will back new remark
+                    String? newRemark = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfile(
+                            userID: userID!,
+                            onRemarkUpdate: (String newRemark) {
+                              setState(() {
+                                conversationName = newRemark;
+                              });
+                            },
+                          ),
+                        ));
+                    setState(() {
+                      backRemark = newRemark;
+                    });
+                  } else {
+                    final groupID = widget.selectedConversation.groupID;
+                    if (groupID != null) {
+                      Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => UserProfile(
-                              userID: userID!,
-                              onRemarkUpdate: (String newRemark) {
-                                setState(() {
-                                  conversationName = newRemark;
-                                });
-                              },
+                            builder: (context) => GroupProfilePage(
+                              groupID: groupID,
                             ),
-                          ));
-                      setState(() {
-                        backRemark = newRemark;
+                          )).then((value) {
+                        onGetGroupInfo();
                       });
-                    } else {
-                      final groupID = widget.selectedConversation.groupID;
-                      if (groupID != null) {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => GroupProfilePage(
-                                groupID: groupID,
-                              ),
-                            ));
-                      }
                     }
-                  },
-                  icon: Icon(
-                    Icons.more_horiz,
-                    color: hexToColor("010000"),
-                    size: 20,
-                  ))
-            ],
-          ),
+                  }
+                },
+                icon: Icon(
+                  Icons.more_horiz,
+                  color: hexToColor("010000"),
+                  size: 20,
+                ))
+          ],
+        ),
         customAppBar: isWideScreen
             ? ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 60),
@@ -866,5 +928,41 @@ class _ChatState extends State<Chat> {
             : null,
       ),
     );
+  }
+
+  _sendCustomPatMessage(V2TimMessage message, context) async {
+    V2TimFriendInfo? friendInfo =
+        await IMServiceManager().onGetUserInfo(message.sender ?? '');
+    String patString = friendInfo?.userProfile?.customInfo?['selfPat'] ?? "";
+    V2TimValueCallback<V2TimMsgCreateInfoResult> createCustomMessageRes =
+        await TencentImSDKPlugin.v2TIMManager
+            .getMessageManager()
+            .createCustomMessage(
+              data: jsonEncode({
+                "toUserId": friendInfo?.userID,
+                "toNickName": friendInfo?.friendRemark?.isNotEmpty == true
+                    ? friendInfo?.friendRemark
+                    : friendInfo?.userProfile?.nickName ?? friendInfo?.userID,
+                "fromUserId": "${loginUserInfo?.userID}",
+                "fromNickName":
+                    "${loginUserInfo?.nickName ?? loginUserInfo?.userID}",
+                "patString": patString,
+                "src": "9"
+              }),
+              desc: 'CustomPatMessage',
+              extension: '自定义extension',
+            );
+    if (createCustomMessageRes.code == 0) {
+      String? id = createCustomMessageRes.data?.id;
+      // 发送自定义消息
+      V2TimValueCallback<V2TimMessage>? sendMessageRes = await _chatController
+          .sendMessage(messageInfo: createCustomMessageRes.data?.messageInfo);
+      if (sendMessageRes!.code == 0) {
+        // 发送成功
+        sendMessageRes.data?.customElem?.data; //自定义data
+        sendMessageRes.data?.customElem?.desc; //自定义desc
+        sendMessageRes.data?.customElem?.extension; //自定义extension
+      }
+    }
   }
 }

@@ -36,9 +36,9 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
   }
 
   getLoginUserInfo() async {
-    if (PlatformUtils().isWeb) {
-      return;
-    }
+    // if (PlatformUtils().isWeb) {
+    //   return;
+    // }
     final res = await _sdkInstance.getLoginUser();
     if (res.code == 0) {
       final result = await _sdkInstance.getUsersInfo(userIDList: [res.data!]);
@@ -69,6 +69,9 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
                     setState(() {
                       homePageIndex = index;
                     });
+                    if (index == 2) {
+                      getLoginUserInfo();
+                    }
                   },
                 ),
               )

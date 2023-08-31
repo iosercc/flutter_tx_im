@@ -1,5 +1,6 @@
 // ignore_for_file: unused_import, avoid_print
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -9,6 +10,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_push_for_china/tencent_chat_push_for_china.dart';
+import 'package:tencent_cloud_chat_demo/model/user_model.dart';
+import 'package:tencent_cloud_chat_demo/network/api.dart';
+import 'package:tencent_cloud_chat_demo/network/http_extension.dart';
+import 'package:tencent_cloud_chat_demo/network/network.dart';
+import 'package:tencent_cloud_chat_demo/network/network_utils.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
+import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
+import 'package:tencent_cloud_chat_demo/utils/user_utils.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 
 import 'package:tencent_cloud_chat_demo/src/config.dart';
@@ -22,10 +31,10 @@ import 'package:tencent_cloud_chat_demo/utils/push/channel/channel_push.dart';
 import 'package:tencent_cloud_chat_demo/utils/push/push_constant.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:tencent_cloud_chat_vote_plugin/tencent_cloud_chat_vote_plugin.dart';
 
 class LoginPage extends StatelessWidget {
   final Function? initIMSDK;
+
   const LoginPage({Key? key, this.initIMSDK}) : super(key: key);
 
   @override
@@ -43,6 +52,7 @@ class LoginPage extends StatelessWidget {
 
 class AppLayout extends StatelessWidget {
   final Function? initIMSDK;
+
   const AppLayout({Key? key, this.initIMSDK}) : super(key: key);
 
   @override
@@ -103,29 +113,29 @@ class AppLogo extends StatelessWidget {
                 ),
                 Expanded(
                     child: Container(
-                      margin: const EdgeInsets.only(right: 5),
-                      height: CommonUtils.adaptHeight(180),
-                      padding: const EdgeInsets.only(top: 10, left: 12, right: 15),
-                      child: Column(
-                        children: <Widget>[
-                          Text(
-                            TIM_t("腾讯云即时通信IM"),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: CommonUtils.adaptFontSize(58),
-                            ),
-                          ),
-                          Text(
-                            TIM_t("欢迎使用本 APP 体验腾讯云 IM 产品服务"),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: CommonUtils.adaptFontSize(26),
-                            ),
-                          ),
-                        ],
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  margin: const EdgeInsets.only(right: 5),
+                  height: CommonUtils.adaptHeight(180),
+                  padding: const EdgeInsets.only(top: 10, left: 12, right: 15),
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        TIM_t("腾讯云即时通信IM"),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: CommonUtils.adaptFontSize(58),
+                        ),
                       ),
-                    )),
+                      Text(
+                        TIM_t("欢迎使用本 APP 体验腾讯云 IM 产品服务"),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: CommonUtils.adaptFontSize(26),
+                        ),
+                      ),
+                    ],
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                )),
               ],
             ),
           ),
@@ -137,6 +147,7 @@ class AppLogo extends StatelessWidget {
 
 class LoginForm extends StatefulWidget {
   final Function? initIMSDK;
+
   const LoginForm({Key? key, required this.initIMSDK}) : super(key: key);
 
   @override
@@ -147,6 +158,9 @@ class _LoginFormState extends State<LoginForm> {
   final CoreServicesImpl coreInstance = TIMUIKitCore.getInstance();
 
   String userID = '';
+  String code = '';
+  Timer? timer;
+  int countDown = 60;
 
   @override
   initState() {
@@ -155,6 +169,29 @@ class _LoginFormState extends State<LoginForm> {
     if (widget.initIMSDK != null) {
       widget.initIMSDK!();
     }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (timer != null) {
+      timer!.cancel();
+    }
+  }
+
+  startTimer() {
+    if (timer != null && timer!.isActive) {
+      return;
+    }
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        countDown--;
+        if (countDown == 0) {
+          timer.cancel();
+          countDown = 60;
+        }
+      });
+    });
   }
 
   TextSpan webViewLink(String title, String url) {
@@ -264,10 +301,46 @@ class _LoginFormState extends State<LoginForm> {
 
   userLogin() async {
     if (userID.trim() == '') {
-      ToastUtils.toast(TIM_t("请输入用户名"));
+      ToastUtils.toast(TIM_t("请输入手机号"));
+      return;
+    }
+    if (code.trim() == '') {
+      ToastUtils.toast(TIM_t("请输入验证码"));
       return;
     }
 
+    ResponseData responseData = await Api.login.post({
+      'phone': userID,
+      'code': code,
+    });
+    if (responseData.isSuccess()) {
+      // loginIM();
+      await NetWorkUtils.setToken(
+          '${responseData.data['token_type']} ' + responseData.data!['token']);
+      responseData = await Api.getUserInfo.get({});
+      if (responseData.isSuccess()) {
+        UserModel userModel = UserModel.fromJson(responseData.data);
+        UserUtils.saveUserModel(userModel);
+        await IMServiceManager.loginIM(userModel);
+        getUserInfo();
+        directToHomePage();
+      }
+    }
+  }
+
+  getUserInfo () async{
+    final res = await TIMUIKitCore.getSDKInstance().getLoginUser();
+    if (res.code == 0) {
+      final result = await TIMUIKitCore.getSDKInstance().getUsersInfo(userIDList: [res.data!]);
+
+      if (result.code == 0) {
+        Provider.of<LoginUserInfo>(context, listen: false)
+            .setLoginUserInfo(result.data![0]);
+      }
+    }
+  }
+
+  loginIM() async {
     String key = IMDemoConfig.key;
     int sdkAppId = IMDemoConfig.sdkappid;
     if (key == "") {
@@ -292,10 +365,6 @@ class _LoginFormState extends State<LoginForm> {
           TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1));
       return;
     }
-    
-    // Initialize the poll plug-in
-    TencentCloudChatVotePlugin.initPlugin();
-
     directToHomePage();
   }
 
@@ -336,7 +405,7 @@ class _LoginFormState extends State<LoginForm> {
                       padding:
                           EdgeInsets.only(top: CommonUtils.adaptFontSize(34)),
                       child: Text(
-                        TIM_t("用户名"),
+                        TIM_t("手机号"),
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: CommonUtils.adaptFontSize(34),
@@ -348,17 +417,76 @@ class _LoginFormState extends State<LoginForm> {
                       decoration: InputDecoration(
                         contentPadding:
                             EdgeInsets.only(left: CommonUtils.adaptWidth(14)),
-                        hintText: TIM_t("请输入用户名"),
+                        hintText: TIM_t("请输入手机号"),
                         hintStyle:
                             TextStyle(fontSize: CommonUtils.adaptFontSize(32)),
                         //
                       ),
+                      inputFormatters: [
+                        //只允许输入数字
+                        FilteringTextInputFormatter.digitsOnly,
+                        //最大长度11
+                        LengthLimitingTextInputFormatter(11),
+                      ],
                       keyboardType: TextInputType.number,
                       onChanged: (v) {
                         setState(() {
                           userID = v;
                         });
                       },
+                    ),
+                    Padding(
+                      padding:
+                          EdgeInsets.only(top: CommonUtils.adaptFontSize(34)),
+                      child: Text(
+                        TIM_t("验证码"),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: CommonUtils.adaptFontSize(34),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            autofocus: false,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.only(
+                                  left: CommonUtils.adaptWidth(14)),
+                              hintText: TIM_t("请输入验证码"),
+                              hintStyle: TextStyle(
+                                  fontSize: CommonUtils.adaptFontSize(32)),
+                            ),
+                            inputFormatters: [
+                              //只允许输入数字
+                              FilteringTextInputFormatter.digitsOnly,
+                              //最大长度11
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              setState(() {
+                                code = v;
+                              });
+                            },
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            startTimer();
+                          },
+                          child: Text(
+                            TIM_t(
+                                "获取验证码${countDown == 60 ? "" : "($countDown)"}"),
+                            style: TextStyle(
+                                fontSize: CommonUtils.adaptFontSize(32),
+                                color: countDown == 60
+                                    ? Colors.blue
+                                    : Colors.grey),
+                          ),
+                        )
+                      ],
                     ),
                     Container(
                       margin: EdgeInsets.only(
