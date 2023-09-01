@@ -17,6 +17,7 @@ import 'package:tencent_cloud_chat_demo/network/network.dart';
 import 'package:tencent_cloud_chat_demo/network/network_utils.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
+import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
 import 'package:tencent_cloud_chat_demo/utils/user_utils.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 
@@ -324,6 +325,7 @@ class _LoginFormState extends State<LoginForm> {
         await IMServiceManager.loginIM(userModel);
         getUserInfo();
         directToHomePage();
+        InitStep.setCustomSticker(context);
       }
     }
   }

@@ -3,9 +3,11 @@ import 'dart:io';
 import 'dart:math';
 
 // import 'package:tencent_chat_push_for_china/tencent_chat_push_for_china.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_cloud_chat_demo/model/user_model.dart';
 import 'package:tencent_cloud_chat_demo/src/config.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
+import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/enum/V2TimAdvancedMsgListener.dart';
 import 'package:tencent_cloud_chat_sdk/enum/V2TimConversationListener.dart';
@@ -116,6 +118,26 @@ class IMServiceManager {
     TencentCloudChatVotePlugin.initPlugin();
     setUserInfo(userModel);
     // directToHomePage();
+  }
+
+  static logoutIM() async {
+    final res = await TIMUIKitCore.getInstance().logout();
+
+    if (res.code == 0) {
+      try {
+        Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
+        SharedPreferences prefs = await _prefs;
+        prefs.remove('smsLoginUserId');
+        prefs.remove('smsLoginToken');
+        prefs.remove('smsLoginPhone');
+        prefs.remove('channelListMain');
+        prefs.remove('discussListMain');
+      } catch (err) {
+        ToastUtils.log("someError");
+        ToastUtils.log(err);
+      }
+      Routes().directToLoginPage();
+    }
   }
 
   static setUserInfo(UserModel userModel) async {

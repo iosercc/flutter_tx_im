@@ -4,8 +4,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_calls_uikit/tuicall_kit.dart';
+import 'package:tencent_cloud_chat_demo/model/user_model.dart';
+import 'package:tencent_cloud_chat_demo/network/api.dart';
+import 'package:tencent_cloud_chat_demo/network/http_extension.dart';
+import 'package:tencent_cloud_chat_demo/network/network.dart';
 import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
+import 'package:tencent_cloud_chat_demo/utils/user_utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
 import 'package:tencent_super_tooltip/tencent_super_tooltip.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -491,10 +496,16 @@ class HomePageState extends State<HomePage> {
                   isNeedMoveToConversation = false;
                 });
                 if (index == 2) {
-                  V2TimUserFullInfo? info = await IMServiceManager.getLoginUserInfo();
-                  if (info != null) {
-                    Provider.of<LoginUserInfo>(context, listen: false)
-                        .setLoginUserInfo(info);
+                  ResponseData responseData = await Api.getUserInfo.get({});
+                  if (responseData.isSuccess()){
+                    UserModel userModel = UserModel.fromJson(responseData.data);
+                    UserUtils.saveUserModel(userModel);
+                    await IMServiceManager.setUserInfo(userModel);
+                    V2TimUserFullInfo? info = await IMServiceManager.getLoginUserInfo();
+                    if (info != null) {
+                      Provider.of<LoginUserInfo>(context, listen: false)
+                          .setLoginUserInfo(info);
+                    }
                   }
                 }
               },

@@ -120,6 +120,9 @@ class _ChatV2State extends State<ChatV2> {
                   scrollController:
                       _historyMessageListController.scrollController!,
                   hintText: "",
+                  addCustomEmoji: (){
+                    print('addCustomEmoji');
+                  },
                   // showSendAudio: false,
                   // showSendEmoji: false,
                 )

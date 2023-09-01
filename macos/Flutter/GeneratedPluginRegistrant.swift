@@ -13,6 +13,7 @@ import device_info_plus
 import fc_native_video_thumbnail
 import file_selector_macos
 import image_clipboard
+import image_editor_common
 import just_audio
 import package_info_plus
 import pasteboard
@@ -31,6 +32,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FcNativeVideoThumbnailPlugin.register(with: registry.registrar(forPlugin: "FcNativeVideoThumbnailPlugin"))
   FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))
   ImageClipboardPlugin.register(with: registry.registrar(forPlugin: "ImageClipboardPlugin"))
+  ImageEditorPlugin.register(with: registry.registrar(forPlugin: "ImageEditorPlugin"))
   JustAudioPlugin.register(with: registry.registrar(forPlugin: "JustAudioPlugin"))
   FLTPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FLTPackageInfoPlusPlugin"))
   PasteboardPlugin.register(with: registry.registrar(forPlugin: "PasteboardPlugin"))

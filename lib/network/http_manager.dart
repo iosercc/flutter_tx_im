@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:tencent_cloud_chat_demo/network/dio_log/interceptor/dio_log_interceptor.dart';
+import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'network_utils.dart';
 import 'result_data.dart';
@@ -18,7 +19,8 @@ class HttpManager {
 
   HttpManager._() {
     if (null == _dio) {
-      _dio = Dio(BaseOptions(connectTimeout: const Duration(milliseconds: 15000)));
+      _dio =
+          Dio(BaseOptions(connectTimeout: const Duration(milliseconds: 15000)));
       // _dio!.interceptors.add(RequestInterceptors());
       _dio!.interceptors.add(DioLogInterceptor());
       // final cookieJar = CookieJar();
@@ -32,16 +34,19 @@ class HttpManager {
   }
 
   static int getNowTempStamp() {
-    return int.parse((DateTime
-        .now()
-        .millisecondsSinceEpoch / 1000).toStringAsFixed(0));
+    return int.parse(
+        (DateTime.now().millisecondsSinceEpoch / 1000).toStringAsFixed(0));
   }
 
   ///通用的GET请求
-  Future<ResponseData> get(api, {required Map<String, dynamic> params, withLoading = true, hideMsg = false}) async {
+  Future<ResponseData> get(api,
+      {required Map<String, dynamic> params,
+      withLoading = true,
+      hideMsg = false}) async {
     _dio!.options.connectTimeout = const Duration(milliseconds: 15000);
     _dio!.options.contentType = "application/json";
     _dio!.options.headers['Authorization'] = NetWorkUtils.getToken();
+    _dio!.options.headers['Accept'] = 'application/json';
     try {
       Response response = await _dio!.get(api, queryParameters: params);
       return httpSuccessHandle(response, hideMsg);
@@ -51,19 +56,23 @@ class HttpManager {
   }
 
   ///通用的POST请求
-  Future<ResponseData> post(api, {required Map<String, dynamic> params, isJson = true, hideMsg = false, isNeedCommonParams = true}) async {
+  Future<ResponseData> post(api,
+      {required Map<String, dynamic> params,
+      isJson = true,
+      hideMsg = false,
+      isNeedCommonParams = true}) async {
     _dio!.options.connectTimeout = const Duration(milliseconds: 15000);
     _dio!.options.sendTimeout = const Duration(milliseconds: 15000);
     _dio!.options.receiveTimeout = const Duration(milliseconds: 15000);
     _dio!.options.contentType = "application/json";
     _dio!.options.responseType = ResponseType.json;
     //公共参数
-    if (isNeedCommonParams) {
-
-    }
+    if (isNeedCommonParams) {}
     _dio!.options.headers['Authorization'] = NetWorkUtils.getToken();
+    _dio!.options.headers['Accept'] = 'application/json';
     try {
-      Response<dynamic> response = await _dio!.post(api, data: isJson ? params : FormData.fromMap(params));
+      Response<dynamic> response = await _dio!
+          .post(api, data: isJson ? params : FormData.fromMap(params));
       return httpSuccessHandle(response, hideMsg);
     } on DioError catch (e) {
       return httpErrorHandle(e, hideMsg: hideMsg);
@@ -71,19 +80,23 @@ class HttpManager {
   }
 
   ///通用的PUT请求
-  Future<ResponseData> put(api, {required Map<String, dynamic> params, isJson = true, hideMsg = false, isNeedCommonParams = true}) async {
+  Future<ResponseData> put(api,
+      {required Map<String, dynamic> params,
+      isJson = true,
+      hideMsg = false,
+      isNeedCommonParams = true}) async {
     _dio!.options.connectTimeout = const Duration(milliseconds: 15000);
     _dio!.options.sendTimeout = const Duration(milliseconds: 15000);
     _dio!.options.receiveTimeout = const Duration(milliseconds: 15000);
     _dio!.options.contentType = "application/json";
     _dio!.options.responseType = ResponseType.json;
     //公共参数
-    if (isNeedCommonParams) {
-
-    }
+    if (isNeedCommonParams) {}
     _dio!.options.headers['Authorization'] = NetWorkUtils.getToken();
+    _dio!.options.headers['Accept'] = 'application/json';
     try {
-      Response<dynamic> response = await _dio!.put(api, data: isJson ? params : FormData.fromMap(params));
+      Response<dynamic> response = await _dio!
+          .put(api, data: isJson ? params : FormData.fromMap(params));
       return httpSuccessHandle(response, hideMsg);
     } on DioError catch (e) {
       return httpErrorHandle(e, hideMsg: hideMsg);
@@ -91,36 +104,44 @@ class HttpManager {
   }
 
   ///通用的DELETE请求
-  Future<ResponseData> delete(api, {required Map<String, dynamic> params, isJson = true, hideMsg = false, isNeedCommonParams = true}) async {
+  Future<ResponseData> delete(api,
+      {required Map<String, dynamic> params,
+      isJson = true,
+      hideMsg = false,
+      isNeedCommonParams = true}) async {
     _dio!.options.connectTimeout = const Duration(milliseconds: 15000);
     _dio!.options.sendTimeout = const Duration(milliseconds: 15000);
     _dio!.options.receiveTimeout = const Duration(milliseconds: 15000);
     _dio!.options.contentType = "application/json";
     _dio!.options.responseType = ResponseType.json;
     //公共参数
-    if (isNeedCommonParams) {
-
-    }
+    if (isNeedCommonParams) {}
     _dio!.options.headers['Authorization'] = NetWorkUtils.getToken();
+    _dio!.options.headers['Accept'] = 'application/json';
     try {
-      Response<dynamic> response = await _dio!.delete(api, data: isJson ? params : FormData.fromMap(params));
+      Response<dynamic> response = await _dio!
+          .delete(api, data: isJson ? params : FormData.fromMap(params));
       return httpSuccessHandle(response, hideMsg);
     } on DioError catch (e) {
       return httpErrorHandle(e, hideMsg: hideMsg);
     }
   }
 
-  postStream(api, {required Map<String, dynamic> params, bool hideMsg = false, int receiveTimeout = 60000}) async {
+  postStream(api,
+      {required Map<String, dynamic> params,
+      bool hideMsg = false,
+      int receiveTimeout = 60000}) async {
     _dio!.options.connectTimeout = const Duration(milliseconds: 15000);
     _dio!.options.sendTimeout = const Duration(milliseconds: 15000);
     _dio!.options.receiveTimeout = Duration(milliseconds: receiveTimeout);
     _dio!.options.contentType = "application/json";
     _dio!.options.responseType = ResponseType.stream;
     _dio!.options.headers['Authorization'] = NetWorkUtils.getToken();
+    _dio!.options.headers['Accept'] = 'application/json';
     // }
     try {
-      Response<ResponseBody> response =
-      await _dio!.post(api, data: params, options: Options(responseType: ResponseType.stream));
+      Response<ResponseBody> response = await _dio!.post(api,
+          data: params, options: Options(responseType: ResponseType.stream));
       return response;
     } on DioError catch (e) {
       return httpErrorHandle(e, hideMsg: hideMsg);
@@ -131,38 +152,40 @@ class HttpManager {
   ///urlPath 文件Url
   ///savePath 本地保存位置
   ///downloadProgressCallBack 下载文件回调
-  Future<Response> downloadFile(String urlPath, String savePath, {DownloadProgressCallBack? downloadProgressCallBack}) async {
+  Future<Response> downloadFile(String urlPath, String savePath,
+      {DownloadProgressCallBack? downloadProgressCallBack}) async {
     Dio dio = Dio();
-    return await dio.download(urlPath, savePath, onReceiveProgress: downloadProgressCallBack);
+    return await dio.download(urlPath, savePath,
+        onReceiveProgress: downloadProgressCallBack);
   }
 
   ///加密参数
-  // encryptParams(Map<String, dynamic> params) {
-  //   String paramsStr = jsonEncode(params).replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '');
-  //   String paramsUrl = Uri.encodeQueryComponent(paramsStr);
-  //   paramsUrl = paramsUrl.replaceAll('%2A', '*');
-  //   List<String> paramsList = [];
-  //   while (paramsUrl.isNotEmpty) {
-  //     if (paramsUrl.length >= 18) {
-  //       paramsList.add(paramsUrl.substring(0, 18));
-  //       paramsUrl = paramsUrl.substring(18);
-  //     } else {
-  //       paramsList.add(paramsUrl);
-  //       paramsUrl = "";
-  //     }
-  //   }
-  //   paramsList.sort();
-  //   String tempStr = "";
-  //   for (String str in paramsList) {
-  //     tempStr += str;
-  //   }
-  //   tempStr += NetWorkUtils.config.signKey;
-  //   var bytes = utf8.encode(tempStr);
-  //   tempStr = sha256.convert(bytes).toString();
-  //   var content = const Utf8Encoder().convert(tempStr);
-  //   var digest = md5.convert(content);
-  //   return digest.toString();
-  // }
+// encryptParams(Map<String, dynamic> params) {
+//   String paramsStr = jsonEncode(params).replaceAll(' ', '').replaceAll('\n', '').replaceAll('\r', '');
+//   String paramsUrl = Uri.encodeQueryComponent(paramsStr);
+//   paramsUrl = paramsUrl.replaceAll('%2A', '*');
+//   List<String> paramsList = [];
+//   while (paramsUrl.isNotEmpty) {
+//     if (paramsUrl.length >= 18) {
+//       paramsList.add(paramsUrl.substring(0, 18));
+//       paramsUrl = paramsUrl.substring(18);
+//     } else {
+//       paramsList.add(paramsUrl);
+//       paramsUrl = "";
+//     }
+//   }
+//   paramsList.sort();
+//   String tempStr = "";
+//   for (String str in paramsList) {
+//     tempStr += str;
+//   }
+//   tempStr += NetWorkUtils.config.signKey;
+//   var bytes = utf8.encode(tempStr);
+//   tempStr = sha256.convert(bytes).toString();
+//   var content = const Utf8Encoder().convert(tempStr);
+//   var digest = md5.convert(content);
+//   return digest.toString();
+// }
 }
 
 typedef DownloadProgressCallBack = Function(int count, int total);
@@ -211,10 +234,16 @@ Future<ResponseData> httpSuccessHandle(Response response, bool hideMsg) async {
 ///处理错误
 Future<ResponseData> httpErrorHandle(DioError e, {hideMsg = false}) async {
   String errorMsg = "";
-  if (e.type == DioErrorType.connectionTimeout || e.type == DioErrorType.receiveTimeout) {
+  if (e.type == DioErrorType.connectionTimeout ||
+      e.type == DioErrorType.receiveTimeout) {
     errorMsg = NetWorkUtils.config?.requestTimeoutTip ?? '';
   } else {
     errorMsg = NetWorkUtils.config?.requestErrorTip ?? '';
+  }
+  if (e.response?.statusCode ==
+      int.parse(NetWorkUtils.config?.noLoginCode ?? '0')) {
+    errorMsg = '登录已失效，请重新登录';
+    IMServiceManager.logoutIM();
   }
   if (!hideMsg && errorMsg.isNotEmpty) {
     ToastUtils.toast(errorMsg);

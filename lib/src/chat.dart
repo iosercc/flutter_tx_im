@@ -5,6 +5,10 @@ import 'dart:math';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:tencent_cloud_chat_demo/main.dart';
+import 'package:tencent_cloud_chat_demo/model/global_config.dart';
+import 'package:tencent_cloud_chat_demo/network/api.dart';
+import 'package:tencent_cloud_chat_demo/network/http_extension.dart';
+import 'package:tencent_cloud_chat_demo/network/network.dart';
 import 'package:tencent_cloud_chat_demo/src/config.dart';
 import 'package:tencent_cloud_chat_demo/src/group_application_list.dart';
 import 'package:tencent_cloud_chat_demo/src/group_profile.dart';
@@ -14,6 +18,7 @@ import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/src/vote_example/vote_create_example.dart';
 import 'package:tencent_cloud_chat_customer_service_plugin/tencent_cloud_chat_customer_service_plugin.dart';
 import 'package:tencent_cloud_chat_demo/src/widgets/marquee_view.dart';
+import 'package:tencent_cloud_chat_demo/utils/avatar_utils.dart';
 import 'package:tencent_cloud_chat_demo/utils/im_service_manager.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/chat_life_cycle.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/separate_models/tui_group_profile_model.dart';
@@ -74,6 +79,7 @@ class _ChatState extends State<Chat> {
   V2TimGroupInfo? groupInfo;
   String? groupNotice;
   V2TimUserFullInfo? loginUserInfo;
+  List<CustomStickerPackage> stickerPackageList = [];
 
   String _getTitle() {
     return backRemark ?? widget.selectedConversation.showName ?? "Chat";
@@ -162,6 +168,60 @@ class _ChatState extends State<Chat> {
     if (widget.selectedConversation.type == 2) {
       onGetGroupInfo();
     }
+
+    initCustomEmoji();
+  }
+
+  initCustomEmoji() {
+    final tccEmojiSet = TUIKitStickerConstData.emojiList
+        .firstWhere((element) => element.name == "tcc1");
+    stickerPackageList.add(CustomStickerPackage(
+        name: tccEmojiSet.name,
+        baseUrl: "assets/custom_face_resource/${tccEmojiSet.name}",
+        isEmoji: tccEmojiSet.isEmoji,
+        isDefaultEmoji: true,
+        stickerList: tccEmojiSet.list
+            .asMap()
+            .keys
+            .map(
+                (idx) => CustomSticker(index: idx, name: tccEmojiSet.list[idx]))
+            .toList(),
+        menuItem: CustomSticker(
+          index: 0,
+          name: tccEmojiSet.icon,
+        )));
+    final qqEmojiSet = TUIKitStickerConstData.emojiList
+        .firstWhere((element) => element.name == "4349");
+    stickerPackageList.add(CustomStickerPackage(
+        name: qqEmojiSet.name,
+        baseUrl: "assets/custom_face_resource/${qqEmojiSet.name}",
+        isEmoji: qqEmojiSet.isEmoji,
+        isDefaultEmoji: true,
+        stickerList: qqEmojiSet.list
+            .asMap()
+            .keys
+            .map((idx) => CustomSticker(index: idx, name: qqEmojiSet.list[idx]))
+            .toList(),
+        menuItem: CustomSticker(
+          index: 0,
+          name: qqEmojiSet.icon,
+        )));
+    CustomEmojiFaceData customEmojiPackage =
+        CustomEmojiFaceData(name: '4350', icon: "menu@2x.png", list: [
+      'https://photo.tuchong.com/1590219/f/254968217.jpg',
+      'https://photo.tuchong.com/1590219/f/254968217.jpg',
+      'https://photo.tuchong.com/1590219/f/254968217.jpg',
+    ]);
+
+    stickerPackageList.add(CustomStickerPackage(
+        name: customEmojiPackage.name,
+        // baseUrl: "assets/custom_face_resource/${customEmojiPackage.name}",
+        isEmoji: customEmojiPackage.isEmoji,
+        stickerList: GlobalConfig.emojiList,
+        menuItem: CustomSticker(
+            index: 0,
+            name: customEmojiPackage.icon,
+            url: 'https://photo.tuchong.com/1590219/f/254968217.jpg')));
   }
 
   onGetGroupInfo() async {
@@ -189,7 +249,9 @@ class _ChatState extends State<Chat> {
       TencentCloudChatCustomerServicePlugin.sendCustomerServiceStartMessage(
           _chatController.sendMessage);
     }
-    onGetGroupInfo();
+    if (widget.selectedConversation.type == 2) {
+      onGetGroupInfo();
+    }
   }
 
   _itemClick(String id, BuildContext context, V2TimConversation conversation,
@@ -580,7 +642,7 @@ class _ChatState extends State<Chat> {
             stickerPanelConfig: StickerPanelConfig(
               useQQStickerPackage: true,
               unicodeEmojiList: [],
-              useTencentCloudChatStickerPackage: false,
+              useTencentCloudChatStickerPackage: true,
               customStickerPackages:
                   Provider.of<CustomStickerPackageData>(context)
                       .customStickerPackageList,
@@ -786,7 +848,6 @@ class _ChatState extends State<Chat> {
           showVideoCall: !isCustomerServiceChat,
           showVoiceCall: !isCustomerServiceChat,
           extraAction: [
-
             // 隐私协议中没有位置消息，暂时下掉
             if (!isCustomerServiceChat)
               MorePanelItem(
@@ -926,6 +987,26 @@ class _ChatState extends State<Chat> {
                   ],
                 ))
             : null,
+        stickerPackageList: stickerPackageList,
+        addCustomEmoji: () {
+          AvatarUtils.chooseImageFromLocal(context, 1,
+              onSuccess: (imageUrl) async {
+                ResponseData responseData =
+                    await Api.addEmoji.post({'emoji_url': imageUrl});
+                if (responseData.isSuccess()) {
+                  ToastUtils.toast(TIM_t("添加成功"));
+                  List<CustomSticker> imageList =
+                      stickerPackageList[2].stickerList;
+                  imageList.insert(0,
+                      CustomSticker(name: imageUrl, index: 0, url: imageUrl));
+                  print(stickerPackageList);
+                }
+              },
+              onError: () {},
+              onLimit: () {
+                ToastUtils.toast(TIM_t("图片大小不能超过3M"));
+              });
+        },
       ),
     );
   }

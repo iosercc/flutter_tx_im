@@ -11,6 +11,7 @@ class StickerPanel extends StatefulWidget {
   final void Function(int unicode) addText;
   final void Function(String emojiName)? addCustomEmojiText;
   final void Function() deleteText;
+  final void Function()? addCustomEmoji;
   final List<CustomStickerPackage> customStickerPackageList;
   final Widget? emptyPlaceHolder;
   final void Function(BuildContext context, LayerLink layerLink,
@@ -45,7 +46,9 @@ class StickerPanel extends StatefulWidget {
       this.height,
       this.width,
       this.isWideScreen = false,
-      this.panelPadding})
+      this.panelPadding,
+        this.addCustomEmoji
+      })
       : super(key: key);
 
   @override
@@ -117,35 +120,42 @@ class _EmojiPanelState extends State<StickerPanel> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                      child: Center(
-                    child: customEmojiFace.isCustomSticker
-                        ? (customEmojiFace.isCustomEmojiSticker
-                            ? (customEmojiFace.isDefaultEmojiSticker
-                                ? CustomEmojiItem(
-                                    size: 22,
-                                    sticker: customEmojiFace.menuItem,
-                                    isCustomEmoji: true,
-                                    isDeafultEmoji: true,
-                                    baseUrl: customEmojiFace.baseUrl)
-                                : CustomEmojiItem(
-                                    size: 22,
-                                    sticker: customEmojiFace.menuItem,
-                                    isCustomEmoji: true,
-                                    baseUrl: customEmojiFace.baseUrl))
-                            : CustomEmojiItem(
-                                size: 22,
-                                sticker: customEmojiFace.menuItem,
-                                baseUrl: customEmojiFace.baseUrl))
-                        : Container(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: EmojiItem(
-                              size: 19,
-                              name: customEmojiFace.menuItem.name,
-                              unicode: customEmojiFace.menuItem.unicode!,
+                  if (index == 2)
+                    Image.asset(
+                      'images/emoji.png',
+                      package: 'tim_ui_kit_sticker_plugin',
+                      width: 22,
+                    )
+                  else
+                    Expanded(
+                        child: Center(
+                      child: customEmojiFace.isCustomSticker
+                          ? (customEmojiFace.isCustomEmojiSticker
+                              ? (customEmojiFace.isDefaultEmojiSticker
+                                  ? CustomEmojiItem(
+                                      size: 22,
+                                      sticker: customEmojiFace.menuItem,
+                                      isCustomEmoji: true,
+                                      isDeafultEmoji: true,
+                                      baseUrl: customEmojiFace.baseUrl)
+                                  : CustomEmojiItem(
+                                      size: 22,
+                                      sticker: customEmojiFace.menuItem,
+                                      isCustomEmoji: true,
+                                      baseUrl: customEmojiFace.baseUrl))
+                              : CustomEmojiItem(
+                                  size: 22,
+                                  sticker: customEmojiFace.menuItem,
+                                  baseUrl: customEmojiFace.baseUrl))
+                          : Container(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: EmojiItem(
+                                size: 19,
+                                name: customEmojiFace.menuItem.name,
+                                unicode: customEmojiFace.menuItem.unicode!,
+                              ),
                             ),
-                          ),
-                  ))
+                    ))
                 ],
               )),
         ),
@@ -159,7 +169,7 @@ class _EmojiPanelState extends State<StickerPanel> {
       List<int> customEmojiStickerIndexList,
       List<CustomStickerPackage> customStickerList) {
     if (customStickerList.isEmpty) return Container();
-    if (customStickerList[selectedIdx].stickerList.isEmpty) {
+    if (customStickerList[selectedIdx].stickerList.isEmpty && selectedIdx != 2) {
       return widget.emptyPlaceHolder ??
           Center(
             child: Text(TIM_t("暂无表情"),
@@ -309,37 +319,61 @@ class _EmojiPanelState extends State<StickerPanel> {
         ],
       );
     }
-    return GridView(
+    return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         childAspectRatio: 1,
       ),
-      children: customStickerList[selectedIdx].stickerList.map(
-        (item) {
-          LayerLink layerLink = LayerLink();
+      itemBuilder: (context, index) {
+        if (index == 0 && !widget.isWideScreen) {
+          ///添加自定义表情
           return GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                final path = customStickerList[selectedIdx].baseUrl == null
-                    ? item.url!
-                    : customStickerList[selectedIdx].baseUrl! + '/' + item.name;
-                widget.sendFaceMsg(item.index, path);
-              },
-              onLongPressStart: (LongPressStartDetails details) {
-                if (widget.onLongTap != null) {
-                  widget.onLongTap!(context, layerLink, selectedIdx, item);
-                }
-              },
-              child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: CompositedTransformTarget(
-                      link: layerLink,
-                      child: CustomEmojiItem(
-                          isBigImage: true,
-                          baseUrl: customStickerList[selectedIdx].baseUrl,
-                          sticker: item))));
-        },
-      ).toList(),
+            onTap: () {
+              widget.addCustomEmoji?.call();
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.asset(
+                  'images/img_add_bg.png',
+                  package: 'tim_ui_kit_sticker_plugin',
+                  width: 50,
+                  fit: BoxFit.fitWidth,
+                ),
+                Image.asset(
+                  'images/icon_add.png',
+                  package: 'tim_ui_kit_sticker_plugin',
+                  width: 20,
+                )
+              ],
+            ),
+          );
+        }
+        final item = customStickerList[selectedIdx].stickerList[!widget.isWideScreen?index - 1 :index];
+        LayerLink layerLink = LayerLink();
+        return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              final path = customStickerList[selectedIdx].baseUrl == null
+                  ? item.url!
+                  : customStickerList[selectedIdx].baseUrl! + '/' + item.name;
+              widget.sendFaceMsg(item.index, path);
+            },
+            onLongPressStart: (LongPressStartDetails details) {
+              if (widget.onLongTap != null) {
+                widget.onLongTap!(context, layerLink, selectedIdx, item);
+              }
+            },
+            child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: CompositedTransformTarget(
+                    link: layerLink,
+                    child: CustomEmojiItem(
+                        isBigImage: true,
+                        baseUrl: customStickerList[selectedIdx].baseUrl,
+                        sticker: item))));
+      },
+      itemCount:!widget.isWideScreen? customStickerList[selectedIdx].stickerList.length + 1:customStickerList[selectedIdx].stickerList.length,
     );
   }
 

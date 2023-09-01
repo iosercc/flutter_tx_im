@@ -1,6 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:sp_util/sp_util.dart';
+import 'package:tencent_cloud_chat_demo/model/global_config.dart';
 import 'package:tencent_cloud_chat_demo/model/user_model.dart';
+import 'package:tencent_cloud_chat_demo/network/api.dart';
+import 'package:tencent_cloud_chat_demo/network/http_extension.dart';
+import 'package:tencent_cloud_chat_demo/network/network.dart';
 import 'package:tencent_cloud_chat_demo/network/network_config.dart';
 import 'package:tencent_cloud_chat_demo/network/network_utils.dart';
 import 'package:tencent_cloud_chat_demo/src/config.dart';
@@ -26,40 +30,26 @@ class InitStep {
     Provider.of<DefaultThemeData>(context, listen: false).currentThemeType =
         themeType;
     Provider.of<DefaultThemeData>(context, listen: false).theme =
-    DefTheme.defaultTheme[themeType]!;
+        DefTheme.defaultTheme[themeType]!;
     _coreInstance.setTheme(theme: DefTheme.defaultTheme[themeType]!);
   }
 
   static setCustomSticker(BuildContext context) async {
-    // 添加自定义表情包
-    List<CustomStickerPackage> customStickerPackageList = [];
-
-    customStickerPackageList.addAll(Const.emojiList.map((customEmojiPackage) {
-      return CustomStickerPackage(
-          name: customEmojiPackage.name,
-          baseUrl: "assets/custom_face_resource/${customEmojiPackage.name}",
-          isEmoji: customEmojiPackage.isEmoji,
-          stickerList: customEmojiPackage.list
-              .asMap()
-              .keys
-              .map((idx) =>
-              CustomSticker(index: idx, name: customEmojiPackage.list[idx],url: 'https://photo.tuchong.com/1590219/f/254968217.jpg'))
-              .toList(),
-          menuItem: CustomSticker(
-            index: 0,
-            name: customEmojiPackage.icon,
-              url: 'https://photo.tuchong.com/1590219/f/254968217.jpg'
-          ));
-    }).toList());
-
-    Provider.of<CustomStickerPackageData>(context, listen: false)
-        .customStickerPackageList = customStickerPackageList;
+    if (NetWorkUtils.getToken().isEmpty) return;
+    ResponseData responseData = await Api.myEmojiList.get({});
+    if (responseData.isSuccess()) {
+      List emojiList = responseData.data;
+      List<CustomSticker> modelList = emojiList
+          .map((e) => CustomSticker.fromJson(e, emojiList.indexOf(e)))
+          .toList();
+      GlobalConfig.emojiList = modelList;
+    }
   }
 
-  static void removeLocalSetting() async {
-  }
+  static void removeLocalSetting() async {}
 
-  static directToLogin(BuildContext context, [Function? initIMSDKAndAddIMListeners]) {
+  static directToLogin(BuildContext context,
+      [Function? initIMSDKAndAddIMListeners]) {
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
@@ -85,9 +75,8 @@ class InitStep {
               Animation secondaryAnimation) {
             return FadeTransition(
               opacity: animation,
-              child: isWideScreen
-                  ? const HomePageWideScreen()
-                  : const HomePage(),
+              child:
+                  isWideScreen ? const HomePageWideScreen() : const HomePage(),
             );
           },
           settings: const RouteSettings(name: '/homePage')),
@@ -95,16 +84,18 @@ class InitStep {
     );
   }
 
-  static void checkLogin(BuildContext context, initIMSDKAndAddIMListeners) async {
+  static void checkLogin(
+      BuildContext context, initIMSDKAndAddIMListeners) async {
     await SpUtil.getInstance();
-    NetWorkUtils.instance.initConfig(NetWorkConfig(successCode: '0',noLoginCode: '401'));
+    NetWorkUtils.instance
+        .initConfig(NetWorkConfig(successCode: '0', noLoginCode: '401'));
     // 初始化IM SDK
     initIMSDKAndAddIMListeners();
     Future.delayed(const Duration(seconds: 2), () {
       // 判断是否登录
       if (NetWorkUtils.getToken() == null || NetWorkUtils.getToken() == '') {
         directToLogin(context, initIMSDKAndAddIMListeners);
-      }else{
+      } else {
         IMServiceManager.loginIM(UserUtils.getUserModel()!);
         directToHomePage(context);
       }
